@@ -13,7 +13,8 @@ class ScreenshotResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'url' => Storage::url($this->path),
+            // скриншоты хранятся на диске public (нужна команда php artisan storage:link)
+            'url' => Storage::disk('public')->url($this->path),
         ];
     }
 }
