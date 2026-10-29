@@ -8,7 +8,7 @@ class UpdateCommentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // проверка «только автор комментария» будет в Policy
+        return $this->user()->can('update', $this->route('comment'));
     }
 
     public function rules(): array

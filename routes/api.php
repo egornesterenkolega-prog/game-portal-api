@@ -38,20 +38,27 @@ Route::prefix('v1')->name('v1.')->group(function () {
     Route::apiResource('games.comments', CommentController::class)->shallow()->only(['index']);
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
 
-    // Требуют токен Sanctum (роли и политики — в ПР8)
-    Route::middleware('auth:sanctum')->group(function () {
+    // Нужен токен Sanctum, и пользователь не должен быть заблокирован
+    Route::middleware(['auth:sanctum', 'not.blocked'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('me', [AuthController::class, 'me'])->name('me');
         Route::match(['put', 'patch'], 'me', [UserController::class, 'update'])->name('me.update');
 
+        // Игры: создаёт любой пользователь; изменение и удаление проверяет GamePolicy
         Route::apiResource('games', GameController::class)->except(['index', 'show']);
-        Route::apiResource('genres', GenreController::class)->except(['index', 'show']);
 
-        // Комментарии: добавление к игре; изменение и удаление по адресу /comments/{comment}
+        // Комментарии: добавление; изменение и удаление проверяет CommentPolicy
         Route::apiResource('games.comments', CommentController::class)->shallow()->only(['store', 'update', 'destroy']);
 
         // Оценка игры (не более одной от пользователя)
         Route::put('games/{game}/reaction', [ReactionController::class, 'update'])->name('games.reaction.update');
         Route::delete('games/{game}/reaction', [ReactionController::class, 'destroy'])->name('games.reaction.destroy');
+
+        // Только администратор: управление жанрами и блокировка пользователей
+        Route::middleware('role:admin')->group(function () {
+            Route::apiResource('genres', GenreController::class)->except(['index', 'show']);
+            Route::post('users/{user}/block', [UserController::class, 'block'])->name('users.block');
+            Route::post('users/{user}/unblock', [UserController::class, 'unblock'])->name('users.unblock');
+        });
     });
 });

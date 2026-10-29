@@ -12,6 +12,7 @@ use App\Services\CommentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class CommentController extends Controller
 {
@@ -38,6 +39,8 @@ class CommentController extends Controller
 
     public function destroy(Comment $comment): Response
     {
+        Gate::authorize('delete', $comment);
+
         $this->comments->delete($comment);
 
         return response()->noContent();

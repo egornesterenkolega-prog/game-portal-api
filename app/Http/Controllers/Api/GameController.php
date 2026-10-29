@@ -12,6 +12,7 @@ use App\Services\GameService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
 
 class GameController extends Controller
 {
@@ -55,6 +56,8 @@ class GameController extends Controller
 
     public function destroy(Game $game): Response
     {
+        Gate::authorize('delete', $game);
+
         $this->games->delete($game);
 
         return response()->noContent();

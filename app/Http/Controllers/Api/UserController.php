@@ -25,4 +25,16 @@ class UserController extends Controller
     {
         return new UserResource($this->users->updateName($request->user(), $request->validated()));
     }
+
+    /** POST /users/{user}/block — блокировка (администратор), токены аннулируются. */
+    public function block(User $user): UserResource
+    {
+        return new UserResource($this->users->block($user));
+    }
+
+    /** POST /users/{user}/unblock — разблокировка (администратор). */
+    public function unblock(User $user): UserResource
+    {
+        return new UserResource($this->users->unblock($user));
+    }
 }

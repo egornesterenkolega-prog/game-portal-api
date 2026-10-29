@@ -9,7 +9,7 @@ class UpdateGameRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // проверка «только автор» будет в Policy
+        return $this->user()->can('update', $this->route('game'));
     }
 
     public function rules(): array
