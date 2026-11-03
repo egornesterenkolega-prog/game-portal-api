@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\GameController;
 use App\Http\Controllers\Api\GenreController;
 use App\Http\Controllers\Api\ReactionController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +58,7 @@ Route::prefix('v1')->name('v1.')->group(function () {
         // Только администратор: управление жанрами и блокировка пользователей
         Route::middleware('role:admin')->group(function () {
             Route::apiResource('genres', GenreController::class)->except(['index', 'show']);
+            Route::get('stats', [StatsController::class, 'overview'])->name('stats');
             Route::post('users/{user}/block', [UserController::class, 'block'])->name('users.block');
             Route::post('users/{user}/unblock', [UserController::class, 'unblock'])->name('users.unblock');
         });

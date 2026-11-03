@@ -54,6 +54,15 @@ class ApiExceptionHandler
             fn (Request $request, Throwable $e) => self::isApi($request)
         );
 
+        // 409: нарушение бизнес-правила
+        $exceptions->render(function (BusinessException $e, Request $request) {
+            if (! self::isApi($request)) {
+                return null;
+            }
+
+            return self::json($e->getMessage(), $e->status());
+        });
+
         // 422: ошибки валидации
         $exceptions->render(function (ValidationException $e, Request $request) {
             if (! self::isApi($request)) {

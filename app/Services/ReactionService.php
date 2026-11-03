@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\BusinessException;
 use App\Models\Game;
 use App\Models\Reaction;
 use App\Models\User;
@@ -14,12 +15,19 @@ class ReactionService
     }
 
     /**
-     * Поставить или изменить оценку (у пользователя не более одной на игру)
-     * и пересчитать рейтинг игры.
+     * Поставить или изменить оценку (не более одной на игру) и пересчитать рейтинг.
+     * Бизнес-правило: нельзя оценивать собственную игру.
+     * Строка игры блокируется, чтобы параллельные оценки не испортили рейтинг.
      */
     public function set(User $user, Game $game, string $type): Reaction
     {
+        if ($game->user_id === $user->id) {
+            throw new BusinessException('Нельзя оценивать собственную игру.');
+        }
+
         return DB::transaction(function () use ($user, $game, $type) {
+            Game::whereKey($game->id)->lockForUpdate()->first();
+
             $reaction = Reaction::updateOrCreate(
                 ['user_id' => $user->id, 'game_id' => $game->id],
                 ['type' => $type],
@@ -41,6 +49,7 @@ class ReactionService
         }
 
         DB::transaction(function () use ($reaction, $game) {
+            Game::whereKey($game->id)->lockForUpdate()->first();
             $reaction->delete();
             $this->rating->recalculate($game);
         });

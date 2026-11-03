@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\BusinessException;
 use App\Models\Genre;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -28,7 +29,7 @@ class GenreService
     public function delete(Genre $genre): void
     {
         if ($genre->games()->exists()) {
-            abort(409, 'Нельзя удалить жанр, который назначен играм.');
+            throw new BusinessException('Нельзя удалить жанр, который назначен играм.');
         }
 
         $genre->delete();

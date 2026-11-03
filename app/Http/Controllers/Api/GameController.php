@@ -6,11 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\IndexGameRequest;
 use App\Http\Requests\StoreGameRequest;
 use App\Http\Requests\UpdateGameRequest;
+use App\Http\Resources\GameCollection;
 use App\Http\Resources\GameResource;
 use App\Models\Game;
 use App\Services\GameService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
@@ -20,9 +20,9 @@ class GameController extends Controller
     {
     }
 
-    public function index(IndexGameRequest $request): AnonymousResourceCollection
+    public function index(IndexGameRequest $request): GameCollection
     {
-        return GameResource::collection($this->games->paginate($request->validated()));
+        return new GameCollection($this->games->paginate($request->validated()));
     }
 
     public function show(Game $game): GameResource

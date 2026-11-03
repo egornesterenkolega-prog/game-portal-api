@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\BusinessException;
 use App\Models\Game;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -13,28 +14,23 @@ use Illuminate\Support\Facades\Storage;
 class GameService
 {
     /**
-     * Каталог: поиск, фильтры, сортировка, пагинация по 20.
-     * По умолчанию сортировка по рейтингу от высокого к низкому.
+     * Каталог: поиск, фильтры, сортировка из белого списка, пагинация.
+     * По умолчанию — по рейтингу от высокого к низкому, 20 на странице.
      */
     public function paginate(array $filters): LengthAwarePaginator
     {
-        $sort = $filters['sort'] ?? 'rating';
-        $direction = $filters['direction'] ?? 'desc';
+        $order = $filters['order'] ?? $filters['direction'] ?? 'desc';
 
         return Game::query()
             ->with(['author', 'genres'])
             ->withCount('comments')
-            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where('title', 'like', "%{$v}%"))
-            ->when($filters['author'] ?? null, fn ($q, $v) => $q->whereHas(
-                'author', fn ($a) => $a->where('name', 'like', "%{$v}%")
-            ))
-            ->when($filters['genre_id'] ?? null, fn ($q, $v) => $q->whereHas(
-                'genres', fn ($g) => $g->where('genres.id', $v)
-            ))
-            ->when(isset($filters['min_rating']), fn ($q) => $q->where('rating', '>=', $filters['min_rating']))
-            ->orderBy($sort, $direction)
-            ->orderByDesc('id')
-            ->paginate(20)
+            ->search($filters['search'] ?? null)
+            ->byAuthor($filters['author'] ?? null)
+            ->inGenre($filters['genre_id'] ?? null)
+            ->minRating($filters['min_rating'] ?? null)
+            ->priceBetween($filters['price_from'] ?? null, $filters['price_to'] ?? null)
+            ->sortBy($filters['sort'] ?? 'rating', $order)
+            ->paginate($filters['per_page'] ?? 20)
             ->withQueryString();
     }
 
@@ -49,27 +45,56 @@ class GameService
         ])->loadCount('comments');
     }
 
-    /** Публикация игры: файлы + запись + жанры + скриншоты, рейтинг = 0. */
+    /**
+     * Ключевой сценарий: публикация игры.
+     *
+     * Бизнес-правило: у автора не более N игр (config portal.max_games_per_user).
+     * Всё выполняется в одной транзакции; строка автора блокируется (lockForUpdate),
+     * чтобы параллельные запросы не обошли лимит. При любой ошибке запись в БД
+     * откатывается, а уже сохранённые файлы удаляются.
+     */
     public function create(User $author, array $data, array $screenshots, UploadedFile $file): Game
     {
-        return DB::transaction(function () use ($author, $data, $screenshots, $file) {
-            $game = Game::create([
-                'user_id' => $author->id,
-                'title' => $data['title'],
-                'description' => $data['description'],
-                'price' => $data['price'],
-                'file_path' => $file->store('games'),
-                'rating' => 0,
-            ]);
+        $localFiles = [];
+        $publicFiles = [];
 
-            $game->genres()->sync($data['genre_ids']);
+        try {
+            return DB::transaction(function () use ($author, $data, $screenshots, $file, &$localFiles, &$publicFiles) {
+                User::whereKey($author->id)->lockForUpdate()->first();
 
-            foreach ($screenshots as $screenshot) {
-                $game->screenshots()->create(['path' => $screenshot->store('screenshots', 'public')]);
-            }
+                $limit = (int) config('portal.max_games_per_user');
+                if (Game::where('user_id', $author->id)->count() >= $limit) {
+                    throw new BusinessException("Достигнут лимит: автор может опубликовать не более {$limit} игр.");
+                }
 
-            return $game->load(['author', 'genres', 'screenshots']);
-        });
+                $filePath = $file->store('games');
+                $localFiles[] = $filePath;
+
+                $game = Game::create([
+                    'user_id' => $author->id,
+                    'title' => $data['title'],
+                    'description' => $data['description'],
+                    'price' => $data['price'],
+                    'file_path' => $filePath,
+                    'rating' => 0,
+                ]);
+
+                $game->genres()->sync($data['genre_ids']);
+
+                foreach ($screenshots as $screenshot) {
+                    $path = $screenshot->store('screenshots', 'public');
+                    $publicFiles[] = $path;
+                    $game->screenshots()->create(['path' => $path]);
+                }
+
+                return $game->load(['author', 'genres', 'screenshots']);
+            });
+        } catch (\Throwable $e) {
+            Storage::delete($localFiles);
+            Storage::disk('public')->delete($publicFiles);
+
+            throw $e;
+        }
     }
 
     /** Изменение: текстовые поля, жанры; новый файл игры заменяет старый, скриншоты добавляются. */
