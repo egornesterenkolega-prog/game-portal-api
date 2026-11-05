@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
@@ -18,6 +19,8 @@ class AuthService
             'role' => UserRole::User,
         ]);
 
+        Log::info('Зарегистрирован новый пользователь', ['user_id' => $user->id]);
+
         return [$user, $user->createToken('api')->plainTextToken];
     }
 
@@ -27,12 +30,17 @@ class AuthService
         $user = User::where('email', $email)->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
+            // пароль в журнал не пишется — только факт неудачной попытки
+            Log::warning('Неудачная попытка входа', ['email' => $email]);
             abort(401, 'Неверный email или пароль.');
         }
 
         if ($user->is_blocked) {
+            Log::warning('Попытка входа заблокированного пользователя', ['user_id' => $user->id]);
             abort(403, 'Ваш аккаунт заблокирован.');
         }
+
+        Log::info('Пользователь вошёл в систему', ['user_id' => $user->id]);
 
         return [$user, $user->createToken('api')->plainTextToken];
     }

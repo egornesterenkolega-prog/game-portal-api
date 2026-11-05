@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class GameService
@@ -64,6 +65,8 @@ class GameService
 
                 $limit = (int) config('portal.max_games_per_user');
                 if (Game::where('user_id', $author->id)->count() >= $limit) {
+                    Log::warning('Превышен лимит игр автора', ['user_id' => $author->id, 'limit' => $limit]);
+
                     throw new BusinessException("Достигнут лимит: автор может опубликовать не более {$limit} игр.");
                 }
 
@@ -87,9 +90,15 @@ class GameService
                     $game->screenshots()->create(['path' => $path]);
                 }
 
+                Log::info('Игра опубликована', ['game_id' => $game->id, 'user_id' => $author->id]);
+
                 return $game->load(['author', 'genres', 'screenshots']);
             });
         } catch (\Throwable $e) {
+            if (! $e instanceof BusinessException) {
+                Log::error('Не удалось опубликовать игру', ['user_id' => $author->id, 'error' => $e->getMessage()]);
+            }
+
             Storage::delete($localFiles);
             Storage::disk('public')->delete($publicFiles);
 
@@ -129,6 +138,7 @@ class GameService
         $filePath = $game->file_path;
 
         $game->delete();
+        Log::info('Игра удалена', ['game_id' => $game->id]);
 
         Storage::delete($filePath);
         Storage::disk('public')->delete($screenshotPaths);

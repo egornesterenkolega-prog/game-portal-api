@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\BusinessException;
 use App\Models\Genre;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 
 class GenreService
 {
@@ -29,6 +30,8 @@ class GenreService
     public function delete(Genre $genre): void
     {
         if ($genre->games()->exists()) {
+            Log::warning('Попытка удалить жанр, назначенный играм', ['genre_id' => $genre->id]);
+
             throw new BusinessException('Нельзя удалить жанр, который назначен играм.');
         }
 

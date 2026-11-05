@@ -12,6 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(\App\Http\Middleware\LogApiRequests::class);
            $middleware->alias([
        'role' => \App\Http\Middleware\EnsureUserHasRole::class,
        'not.blocked' => \App\Http\Middleware\EnsureUserIsNotBlocked::class,

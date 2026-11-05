@@ -7,6 +7,7 @@ use App\Models\Game;
 use App\Models\Reaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReactionService
 {
@@ -22,6 +23,8 @@ class ReactionService
     public function set(User $user, Game $game, string $type): Reaction
     {
         if ($game->user_id === $user->id) {
+            Log::warning('Попытка оценить собственную игру', ['user_id' => $user->id, 'game_id' => $game->id]);
+
             throw new BusinessException('Нельзя оценивать собственную игру.');
         }
 
@@ -34,6 +37,7 @@ class ReactionService
             );
 
             $this->rating->recalculate($game);
+            Log::info('Игра оценена', ['game_id' => $game->id, 'user_id' => $user->id, 'type' => $type]);
 
             return $reaction;
         });

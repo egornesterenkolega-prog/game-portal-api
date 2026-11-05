@@ -7,9 +7,18 @@ use App\Models\Game;
 use App\Models\Genre;
 use App\Models\Reaction;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class StatsService
 {
+    /** Выражение «год-месяц» для разных СУБД (MySQL — рабочая БД, SQLite — тесты). */
+    private function monthExpression(): string
+    {
+        return DB::getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', created_at)"
+            : "DATE_FORMAT(created_at, '%Y-%m')";
+    }
+
     /** Сводная статистика портала (withCount, selectRaw, groupBy). */
     public function overview(): array
     {
@@ -50,12 +59,12 @@ class StatsService
                 ]),
             // самые активные авторы
             'top_authors' => User::withCount('games')
-                ->having('games_count', '>', 0)
+                ->has('games')
                 ->orderByDesc('games_count')->orderBy('name')->limit(5)
                 ->get()
                 ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'games_count' => $u->games_count]),
             // публикации по месяцам (groupBy)
-            'games_by_month' => Game::selectRaw("DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS total")
+            'games_by_month' => Game::selectRaw($this->monthExpression().' AS month, COUNT(*) AS total')
                 ->groupBy('month')->orderBy('month')
                 ->get()
                 ->map(fn ($r) => ['month' => $r->month, 'total' => (int) $r->total]),

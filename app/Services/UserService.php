@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserService
 {
@@ -31,6 +32,7 @@ class UserService
             $user->update(['is_blocked' => true]);
             $user->tokens()->delete();
         });
+        Log::warning('Пользователь заблокирован', ['user_id' => $user->id]);
 
         return $user;
     }

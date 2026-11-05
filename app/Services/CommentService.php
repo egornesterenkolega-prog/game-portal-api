@@ -8,6 +8,7 @@ use App\Models\Game;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CommentService
 {
@@ -29,6 +30,8 @@ class CommentService
 
             $limit = (int) config('portal.max_comments_per_game');
             if ($game->comments()->where('user_id', $user->id)->count() >= $limit) {
+                Log::warning('Превышен лимит комментариев', ['user_id' => $user->id, 'game_id' => $game->id]);
+
                 throw new BusinessException("Можно оставить не более {$limit} комментариев к одной игре.");
             }
 
@@ -36,6 +39,8 @@ class CommentService
                 'user_id' => $user->id,
                 'body' => $data['body'],
             ]);
+
+            Log::info('Добавлен комментарий', ['comment_id' => $comment->id, 'game_id' => $game->id, 'user_id' => $user->id]);
 
             return $comment->load('user');
         });
