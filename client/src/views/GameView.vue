@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import api, { errorMessage } from '../api'
 import { useAuthStore } from '../stores/auth'
+import { formatKzt } from '../currency'
 
 const route = useRoute()
 const router = useRouter()
@@ -151,12 +152,18 @@ onMounted(loadGame)
 
     <div class="badges">
       <span class="badge">Рейтинг {{ game.rating }}%</span>
-      <span class="badge price">{{ Number(game.price) === 0 ? 'Бесплатно' : game.price + ' ₽' }}</span>
+      <span class="badge price">{{ Number(game.price) === 0 ? 'Бесплатно' : formatKzt(game.price) }}</span>
       <span v-for="genre in game.genres" :key="genre.id" class="badge">{{ genre.name }}</span>
     </div>
 
     <div v-if="game.screenshots?.length" class="gallery">
-      <img v-for="shot in game.screenshots" :key="shot.id" :src="shot.url" :alt="game.title" />
+      <img
+        v-for="shot in game.screenshots"
+        :key="shot.id"
+        :src="shot.url"
+        :alt="game.title"
+        @error="$event.target.style.display = 'none'"
+      />
     </div>
 
     <p class="description">{{ game.description }}</p>

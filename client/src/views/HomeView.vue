@@ -4,6 +4,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import api, { errorMessage } from '../api'
 import { loadCover } from '../coverCache'
 import GameCard from '../components/GameCard.vue'
+import { formatKzt, kztToRub } from '../currency'
 
 const route = useRoute()
 
@@ -37,7 +38,9 @@ async function loadGames() {
   try {
     const params = {}
     for (const [key, value] of Object.entries(filters)) {
-      if (value !== '' && value !== null) params[key] = value
+      if (value !== '' && value !== null) {
+        params[key] = key === 'price_from' || key === 'price_to' ? kztToRub(value) : value
+      }
     }
     const { data } = await api.get('/games', { params })
     games.value = data.data
@@ -123,8 +126,8 @@ watch(
           placeholder="Мин. рейтинг, %"
         />
         <div class="range">
-          <input v-model="filters.price_from" type="number" min="0" placeholder="Цена от" />
-          <input v-model="filters.price_to" type="number" min="0" placeholder="Цена до" />
+          <input v-model="filters.price_from" type="number" min="0" placeholder="Цена от, ₸" />
+          <input v-model="filters.price_to" type="number" min="0" placeholder="Цена до, ₸" />
         </div>
 
         <h3>Сортировка</h3>
@@ -176,7 +179,12 @@ watch(
     <section>
       <div v-if="showHero && games[0]" class="hero">
         <div class="hero-cover">
-          <img v-if="heroCover" :src="heroCover" :alt="games[0].title" />
+          <img
+            v-if="heroCover"
+            :src="heroCover"
+            :alt="games[0].title"
+            @error="heroCover = null"
+          />
           <div
             v-else
             class="placeholder"
@@ -193,7 +201,7 @@ watch(
             <RouterLink class="button-link" :to="`/games/${games[0].id}`">Подробнее</RouterLink>
             <span class="meta">
               Рейтинг {{ Math.round(Number(games[0].rating)) }}% ·
-              {{ Number(games[0].price) === 0 ? 'Бесплатно' : games[0].price + ' ₽' }}
+              {{ Number(games[0].price) === 0 ? 'Бесплатно' : formatKzt(games[0].price) }}
             </span>
           </div>
         </div>

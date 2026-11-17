@@ -6,6 +6,15 @@ import { useAuthStore } from './stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const query = ref('')
+const theme = ref(localStorage.getItem('game-portal-theme') === 'light' ? 'light' : 'dark')
+
+document.documentElement.dataset.theme = theme.value
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = theme.value
+  localStorage.setItem('game-portal-theme', theme.value)
+}
 
 async function logout() {
   try {
@@ -35,6 +44,15 @@ function search() {
       <form class="nav-search" @submit.prevent="search">
         <input v-model="query" type="search" placeholder="Поиск игр" />
       </form>
+
+      <button
+        type="button"
+        class="theme-toggle"
+        :aria-label="theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'"
+        @click="toggleTheme"
+      >
+        {{ theme === 'dark' ? '☀ Светлая' : '☾ Тёмная' }}
+      </button>
 
       <template v-if="auth.isLoggedIn">
         <RouterLink :to="`/users/${auth.user?.id}`">{{ auth.user?.name }}</RouterLink>

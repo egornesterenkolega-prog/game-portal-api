@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api'
+import { kztToRub } from '../currency'
 
 const router = useRouter()
 const genres = ref([])
@@ -43,7 +44,9 @@ function validateClient() {
   const e = {}
   if (!form.title.trim()) e.title = ['Введите название']
   if (!form.description.trim()) e.description = ['Введите описание']
-  if (form.price === '' || Number(form.price) < 0) e.price = ['Цена не может быть отрицательной']
+  if (form.price === '' || !Number.isFinite(Number(form.price)) || Number(form.price) < 0) {
+    e.price = ['Укажите неотрицательную цену']
+  }
   if (form.genre_ids.length < 1 || form.genre_ids.length > 3) {
     e.genre_ids = ['Выберите от 1 до 3 жанров']
   }
@@ -70,7 +73,7 @@ async function submit() {
   const data = new FormData()
   data.append('title', form.title)
   data.append('description', form.description)
-  data.append('price', form.price)
+  data.append('price', kztToRub(form.price))
   form.genre_ids.forEach((id) => data.append('genre_ids[]', id))
   screenshots.value.forEach((file) => data.append('screenshots[]', file))
   data.append('game_file', gameFile.value)
@@ -107,7 +110,7 @@ async function submit() {
     </div>
 
     <div>
-      <label>Цена (0 — бесплатно) <input v-model="form.price" type="number" min="0" step="0.01" /></label>
+      <label>Цена в ₸ (0 — бесплатно) <input v-model="form.price" type="number" min="0" step="0.01" /></label>
       <p v-for="text in fieldErrors('price')" :key="text" class="error">{{ text }}</p>
     </div>
 

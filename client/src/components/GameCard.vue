@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { loadCover } from '../coverCache'
+import { formatKzt } from '../currency'
 
 const props = defineProps({ game: { type: Object, required: true } })
 
@@ -20,7 +21,7 @@ onMounted(async () => {
 <template>
   <RouterLink class="card" :to="`/games/${game.id}`">
     <div class="cover">
-      <img v-if="cover" :src="cover" :alt="game.title" />
+      <img v-if="cover" :src="cover" :alt="game.title" @error="cover = null" />
       <div v-else class="placeholder" :style="{ background: color }">{{ initial }}</div>
       <span class="rating-chip">{{ rating }}%</span>
     </div>
@@ -29,7 +30,7 @@ onMounted(async () => {
       <h3>{{ game.title }}</h3>
       <span class="author">{{ game.author?.name }}</span>
       <span class="price-line" :class="{ free: isFree }">
-        {{ isFree ? 'Бесплатно' : game.price + ' ₽' }}
+        {{ isFree ? 'Бесплатно' : formatKzt(game.price) }}
       </span>
     </div>
   </RouterLink>

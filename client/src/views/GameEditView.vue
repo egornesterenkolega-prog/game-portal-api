@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api, { errorMessage } from '../api'
 import { useAuthStore } from '../stores/auth'
+import { kztToRub, rubToKzt } from '../currency'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,7 +32,7 @@ onMounted(async () => {
     genres.value = genresResponse.data.data ?? genresResponse.data
     form.title = game.value.title
     form.description = game.value.description
-    form.price = game.value.price
+    form.price = Math.round(rubToKzt(game.value.price))
     form.genre_ids = (game.value.genres ?? []).map((g) => g.id)
   } catch (e) {
     message.value = e.response?.status === 404 ? 'Игра не найдена' : errorMessage(e)
@@ -43,11 +44,16 @@ onMounted(async () => {
 async function submit() {
   errors.value = {}
   message.value = ''
+  if (form.price === '' || !Number.isFinite(Number(form.price)) || Number(form.price) < 0) {
+    errors.value = { price: ['Укажите неотрицательную цену'] }
+    return
+  }
+
   try {
     await api.put(`/games/${game.value.id}`, {
       title: form.title,
       description: form.description,
-      price: form.price,
+      price: kztToRub(form.price),
       genre_ids: form.genre_ids,
     })
     router.push(`/games/${game.value.id}`)
@@ -76,7 +82,7 @@ async function submit() {
       <p v-for="text in fieldErrors('description')" :key="text" class="error">{{ text }}</p>
     </div>
     <div>
-      <label>Цена <input v-model="form.price" type="number" min="0" step="0.01" /></label>
+      <label>Цена в ₸ <input v-model="form.price" type="number" min="0" step="1" /></label>
       <p v-for="text in fieldErrors('price')" :key="text" class="error">{{ text }}</p>
     </div>
     <div>

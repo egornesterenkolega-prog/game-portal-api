@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api, { errorMessage } from '../api'
+import { formatKzt } from '../currency'
 
 const stats = ref(null)
 const loading = ref(true)
@@ -16,6 +17,11 @@ const monthMax = computed(() =>
 function num(value, digits = 2) {
   if (value === null || value === undefined) return '—'
   return Number(value).toLocaleString('ru-RU', { maximumFractionDigits: digits })
+}
+
+function price(value) {
+  if (value === null || value === undefined) return '—'
+  return formatKzt(value)
 }
 
 onMounted(async () => {
@@ -47,8 +53,8 @@ onMounted(async () => {
     <div class="stat-grid">
       <div class="stat"><span>Бесплатные</span><b>{{ num(stats.games?.free, 0) }}</b></div>
       <div class="stat"><span>Платные</span><b>{{ num(stats.games?.paid, 0) }}</b></div>
-      <div class="stat"><span>Средняя цена</span><b>{{ num(stats.games?.avg_price) }}</b></div>
-      <div class="stat"><span>Максимальная цена</span><b>{{ num(stats.games?.max_price) }}</b></div>
+      <div class="stat"><span>Средняя цена</span><b>{{ price(stats.games?.avg_price) }}</b></div>
+      <div class="stat"><span>Максимальная цена</span><b>{{ price(stats.games?.max_price) }}</b></div>
       <div class="stat"><span>Средний рейтинг</span><b>{{ num(stats.games?.avg_rating) }}%</b></div>
     </div>
 
